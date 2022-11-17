@@ -1,0 +1,28 @@
+﻿@using Microsoft.Extensions.Logging
+@inject ILogger<Error> Logger
+
+<CascadingValue Value="this">
+    @ChildContent
+</CascadingValue>
+
+@if (ErrorMessage is not null)
+{
+    <div class="alert alert-danger" role="alert">
+        <h3>@ErrorMessage</h3>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string ErrorMessage { get; set; } = string.Empty;
+
+    public void ProcessError(Exception ex)
+    {
+        Logger.LogError("Error:ProcessError - Type: {Type} Message: {Message}", ex.GetType(), ex.Message);
+
+        ErrorMessage = ex.Message;
+    }
+}

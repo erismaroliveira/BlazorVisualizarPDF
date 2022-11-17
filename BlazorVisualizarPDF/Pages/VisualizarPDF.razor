@@ -1,0 +1,87 @@
+﻿@page "/visualizar-pdf"
+
+@inject IUploadService uploadService
+@inject IArquivoService arquivoService
+@inject IJSRuntime js
+@inject IWebHostEnvironment env
+
+<InputFile OnChange="TratarArquivoSelecionado" multiple />
+
+<table class="table table-bordered" style="margin-top:10px;">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>PDF</th>
+            <th>Visualizar</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (arquivoPDF.Arquivos != null && arquivoPDF.Arquivos.Count > 0)
+        {
+            @foreach (var arquivo in arquivoPDF.Arquivos)
+            {
+                <tr>
+                    <td>@arquivo.ArquivoId</td>
+                    <td>@arquivo.Nome</td>
+                    <td>
+                        <button class="btn btn-primary" @onclick="@(e => MostrarNaPagina(arquivo.ArquivoId))">Página atual</button>
+                        <button class="btn btn-success" @onclick="@(e => MostrarEmNovaAba(arquivo.ArquivoId))">Abrir nova aba</button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@if (!string.IsNullOrEmpty(erro))
+{
+    <Error ErrorMessage="@erro" />
+}
+
+@if (!string.IsNullOrEmpty(@nomePDF))
+{
+    <iframe src="/uploads/@nomePDF" style="width:100%;height:1000px;"></iframe>
+}
+
+@code {
+    public ArquivoPDF arquivoPDF = new();
+    IReadOnlyList<IBrowserFile>? arquivosSelecionados;
+    public string nomePDF = string.Empty;
+    public string erro = string.Empty;
+
+    [CascadingParameter]
+    public Error? Error { get; set; }
+
+    private async Task TratarArquivoSelecionado(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            arquivosSelecionados = e.GetMultipleFiles();
+
+            foreach (var arquivo in arquivosSelecionados)
+            {
+                if (arquivo is not null)
+                {
+                    await uploadService.ArquivoUpload(arquivo);
+                }
+            }
+
+            arquivoPDF.Arquivos = arquivoService.GetPdfs();
+            erro = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Error?.ProcessError(ex);
+            erro = ex.Message;
+        }
+    }
+
+    private void MostrarNaPagina(int arquivoId) =>
+        nomePDF = arquivoPDF.Arquivos.SingleOrDefault(x => x.ArquivoId == arquivoId).Nome;
+
+    private void MostrarEmNovaAba(int arquivoId)
+    {
+        nomePDF = arquivoPDF.Arquivos.SingleOrDefault(x => x.ArquivoId == arquivoId).Nome;
+        js.InvokeVoidAsync("AbrirNovaAba", nomePDF);
+    }
+}
